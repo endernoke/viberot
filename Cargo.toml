@@ -26,22 +26,20 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # File watching for config reload
 notify = "6.0"
 
-# Process management
-sysinfo = "0.30"
-
 # Wildcard matching
 globset = "0.4"
 
 # Directories
 dirs = "5.0"
+tasklist = "0.3.1"
 
-# Windows-specific dependencies
+# Windows-specific dependencies for ETW
 [target.'cfg(windows)'.dependencies]
+ferrisetw = "1.0"
 windows = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_System_Threading", 
     "Win32_System_Diagnostics_Etw",
-    "Win32_System_Pipes",
     "Win32_Security",
 ] }
 widestring = "1.0"

@@ -1,19 +1,15 @@
 use crate::config::{Config, Action};
 use globset::{Glob, GlobSetBuilder};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{debug, error};
+use tracing::error;
 
-pub struct RuleEngine {
-    config: Arc<RwLock<Config>>,
-}
+pub struct RuleEngine {}
 
 impl RuleEngine {
-    pub fn new(config: Arc<RwLock<Config>>) -> Self {
-        Self { config }
+    pub fn new() -> Self {
+        Self {}
     }
 
-    pub async fn match_command(&self, command: &str, config: &Config) -> Option<Action> {
+    pub fn match_command(&self, command: &str, config: &Config) -> Option<Action> {
         // Create a glob set from all rules
         let mut builder = GlobSetBuilder::new();
         for rule in config.rules.iter() {
@@ -38,11 +34,11 @@ impl RuleEngine {
         // Find matching rules
         let matches = glob_set.matches(command);
         if let Some(&first_match) = matches.first() {
-            debug!("Command '{}' matched rule: '{}'", command, config.rules[first_match].command);
+            // debug!("Command '{}' matched rule: '{}'", command, config.rules[first_match].command);
             return Some(config.rules[first_match].action.clone());
         }
 
-        debug!("No rules matched command: '{}'", command);
+        // debug!("No rules matched command: '{}'", command);
         None
     }
 }
