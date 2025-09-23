@@ -7,21 +7,21 @@ This document outlines a proposed roadmap for developing Command-Sidekick.
 The goal of this milestone is to have a working Minimum Viable Product (MVP) on Windows, as it's the platform for the original proof-of-concept.
 
 - **[Core Service]**
-    - [ ] Set up Rust project structure.
-    - [ ] Implement TOML configuration loading and parsing.
-    - [ ] Implement the rule-matching logic for command strings.
-    - [ ] Implement process spawning for external Action Plugins.
-    - [ ] Implement process monitoring (wait for PID to exit) and `stdin` closing for finish notification.
+    - [x] Set up Rust project structure.
+    - [x] Implement TOML configuration loading and parsing.
+    - [x] Implement the rule-matching logic for command strings.
+    - [x] Implement process spawning for external Action Plugins.
+    - [x] Implement process monitoring (wait for PID to exit) and `stdin` closing for finish notification.
 
 - **[Windows Probe]**
-    - [ ] Implement the ETW listener for process creation events.
-    - [ ] Implement the named pipe for sending events to the Core Service.
+    - [x] Implement the WMI listener for process creation events.
+    - [x] Implement the named pipe for sending events to the Core Service.
 
 - **[Action Plugin]**
-    - [ ] Adapt the existing `NpmInstallListener` C# application to act as a simple external plugin that closes when its `stdin` is closed.
+    - [x] Adapt the existing `NpmInstallListener` C# application to act as a simple external plugin that closes when its `stdin` is closed.
 
 - **[Installer/Distribution]**
-    - [ ] Create a simple installer script or package (e.g., MSIX) that installs the Core Service and registers it to run on startup.
+    - [x] Create a simple installer script or package (e.g., MSIX) that installs the Core Service and registers it to run on startup.
 
 **Outcome**: A user can install the service on Windows, configure it to watch for `npm install`, and see the spinner UI appear and disappear correctly.
 

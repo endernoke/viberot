@@ -1,0 +1,8 @@
+<Window x:Class="CommandSidekick.SpinnerPlugin.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Command Sidekick" Height="200" Width="300">
+    <Grid>
+        <!-- Content will be created programmatically -->
+    </Grid>
+</Window>
