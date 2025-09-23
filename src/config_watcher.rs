@@ -1,8 +1,6 @@
 use notify::{Watcher, RecursiveMode, Result as NotifyResult};
 use tokio::sync::mpsc;
 use std::path::Path;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{info, error, warn};
 
 use crate::config::Config;
@@ -14,12 +12,10 @@ pub struct ConfigWatcher {
 
 impl ConfigWatcher {
     pub fn new(
-        config_path: impl AsRef<Path>, 
-        config: Arc<RwLock<Config>>
-    ) -> Result<(Self, mpsc::Receiver<()>), Box<dyn std::error::Error + Send + Sync>> {
+        config_path: impl AsRef<Path>
+    ) -> Result<(Self, mpsc::Receiver<Config>), Box<dyn std::error::Error + Send + Sync>> {
         let (tx, rx) = mpsc::channel(10);
         let config_path = config_path.as_ref().to_path_buf();
-        let config_clone = Arc::clone(&config);
         let watch_path = config_path.clone();
 
         let mut watcher = notify::recommended_watcher(move |res: NotifyResult<notify::Event>| {
@@ -32,18 +28,8 @@ impl ConfigWatcher {
                         // Try to reload the configuration
                         match Config::load(&config_path) {
                             Ok(new_config) => {
-                                // Update the shared config
-                                tokio::spawn({
-                                    let config = Arc::clone(&config_clone);
-                                    async move {
-                                        let mut config_guard = config.write().await;
-                                        *config_guard = new_config;
-                                        info!("Configuration reloaded successfully");
-                                    }
-                                });
-                                
-                                // Notify that config changed
-                                if let Err(e) = tx.blocking_send(()) {
+                                // Send the new config through the channel
+                                if let Err(e) = tx.blocking_send(new_config) {
                                     warn!("Failed to send config change notification: {}", e);
                                 }
                             }

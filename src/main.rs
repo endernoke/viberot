@@ -30,13 +30,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = Arc::new(RwLock::new(Config::load(&config_path)?));
 
     // Set up configuration file watching for hot-reload
-    let (_config_watcher, mut config_change_rx) = ConfigWatcher::new(&config_path, config.clone())?;
+    let (_config_watcher, mut config_change_rx) = ConfigWatcher::new(&config_path)?;
     
     // Spawn task to handle config changes
+    let config_for_watcher = Arc::clone(&config);
     tokio::spawn(async move {
-        while let Some(_) = config_change_rx.recv().await {
-            info!("Configuration changed - rules will be updated for new processes");
-            // The ConfigWatcher already updates the config, we just log here
+        while let Some(new_config) = config_change_rx.recv().await {
+            info!("Configuration changed, updating...");
+            {
+                let mut config_guard = config_for_watcher.write().await;
+                *config_guard = new_config;
+            }
+            info!("Configuration reloaded successfully - rules will be updated for new processes");
         }
     });
 
