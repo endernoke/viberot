@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         
                         // Match against rules
                         let config_guard = config.read().await;
-                        if let Some(action) = rule_engine.match_command(&event.command, &config_guard) {
+                        if let Some(action) = rule_engine.match_command(&event.command, &config_guard).await {
                             info!("Rule matched, starting action: {:?}", action);
                             
                             // Start the action

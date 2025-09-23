@@ -2,18 +2,18 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::{info, warn};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 pub struct Config {
     pub rules: Vec<Rule>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 pub struct Rule {
     pub command: String,
     pub action: Action,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 #[serde(tag = "type")]
 pub enum Action {
     #[serde(rename = "exec")]
