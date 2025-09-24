@@ -29,7 +29,7 @@ impl Config {
         if !path.exists() {
             warn!("Config file not found at {:?}, creating default config", path);
             let default_config = Self::default();
-            default_config.save(path)?;
+            default_config.save_with_comments(path)?;
             return Ok(default_config);
         }
 
@@ -44,27 +44,45 @@ impl Config {
         std::fs::write(path, content)?;
         Ok(())
     }
+
+    pub fn save_with_comments<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let content = r#"# Command Sidekick Configuration File
+# 
+# This file defines rules for intercepting and handling commands.
+# Each rule consists of a command pattern and an action to execute.
+
+# Example configuration structure:
+#
+# [[rules]]
+# command = "*npm-cli.js* install *"
+# # Use the above pattern to match "npm install" 
+# # because when you run npm install, the actual 
+# # expanded commandline is something like 
+# # '"/path/to/nodejs" "/path/to/npm-cli.js" install ...'
+# 
+# # Execute a program or script
+# [rules.action]
+# type = "exec"
+# path = "C:\\path\\to\\action.exe"  # Path to executable
+# args = ["--arg1", "--arg2"]  # Optional arguments (remove this line if no args needed)
+#
+# [[rules]]
+# command = "*pip.exe install *"
+# 
+# [rules.action]
+# type = "exec"
+# path = "python"  # Path to executable
+# args = ["C:\\path\\to\\python\\script", "--arg1"]  # Optional arguments (remove this line if no args needed)
+"#;
+        std::fs::write(path, content)?;
+        Ok(())
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            rules: vec![
-                Rule {
-                    command: "npm install*".to_string(),
-                    action: Action::Executable {
-                        path: "spinner-plugin.exe".to_string(),
-                        args: None,
-                    },
-                },
-                Rule {
-                    command: "npm ci*".to_string(),
-                    action: Action::Executable {
-                        path: "spinner-plugin.exe".to_string(),
-                        args: None,
-                    },
-                },
-            ],
+            rules: vec![],
         }
     }
 }
