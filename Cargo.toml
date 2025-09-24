@@ -5,19 +5,19 @@ edition = "2021"
 authors = ["Command-Sidekick Team"]
 description = "A configurable utility to run actions based on command execution"
 license = "MIT"
+build = "build.rs"
 
 [[bin]]
 name = "sidekick-core"
 path = "src/main.rs"
 
 [dependencies]
-# Async runtime
 tokio = { version = "1.0", features = ["full"] }
-
-# Serialization
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 toml = "0.8"
+globset = "0.4"
+dirs = "5.0"
+tasklist = "0.3.1"
 
 # Logging
 tracing = "0.1"
@@ -27,12 +27,8 @@ tracing-appender = "0.2"
 # File watching for config reload
 notify = "6.0"
 
-# Wildcard matching
-globset = "0.4"
-
-# Directories
-dirs = "5.0"
-tasklist = "0.3.1"
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"
 
 # Windows-specific dependencies for ETW
 [target.'cfg(windows)'.dependencies]
