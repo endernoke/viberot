@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 mod config;
 mod config_watcher;
 mod rule_engine;
@@ -9,6 +11,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use tokio::signal;
 use tracing::{info, error};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use config::Config;
 use config_watcher::ConfigWatcher;
@@ -16,12 +19,59 @@ use rule_engine::RuleEngine;
 use action_orchestrator::ActionOrchestrator;
 use platform::{PlatformProbe, PlatformProbeTrait, ProcessLifecycleEvent};
 
+fn init_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Get log directory
+    let log_dir = get_log_dir()?;
+    
+    // Create a file appender that rotates daily
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "command-sidekick.log");
+    
+    // Create layers for logging
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_appender)
+        .with_ansi(false) // Disable ANSI colors for file output
+        .with_target(true)
+        .with_thread_ids(true)
+        .with_line_number(true);
+    
+    // For Windows subsystem apps, we still want to try console output in case it's redirected
+    let console_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_ansi(true)
+        .with_target(false);
+    
+    // Initialize subscriber with both layers
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(file_layer)
+        .with(console_layer)
+        .init();
+        
+    // Log the log file location
+    eprintln!("Command-Sidekick logs will be written to: {}", log_dir.join("command-sidekick.log").display());
+    
+    Ok(())
+}
+
+fn get_log_dir() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+    let log_dir = dirs::data_local_dir()
+        .ok_or("Could not find local data directory")?;
+    
+    let mut path = log_dir;
+    path.push("command-sidekick");
+    path.push("logs");
+    
+    if let Err(e) = std::fs::create_dir_all(&path) {
+        return Err(format!("Failed to create log directory at {:?}: {}", path, e).into());
+    }
+    
+    Ok(path)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
+    init_logging()?;
 
     info!("Starting Command-Sidekick Core Service");
 
