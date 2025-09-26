@@ -1,6 +1,6 @@
 # Development Milestones
 
-This document outlines a proposed roadmap for developing Command-Sidekick.
+This document outlines a proposed roadmap for developing VibeRot.
 
 ## Milestone 1: Core Service and Windows MVP
 
@@ -34,7 +34,7 @@ This milestone focuses on achieving cross-platform support and introducing the m
 - **[Core Service]**
     - [ ] Refactor IPC to use Unix sockets on Linux.
     - [ ] Embed the Lua interpreter (`mlua`).
-    - [ ] Expose the initial `sidekick` API to the Lua environment.
+    - [ ] Expose the initial `viberot` API to the Lua environment.
     - [ ] Implement the logic to run Lua actions from the config file.
 
 - **[Linux Probe]**

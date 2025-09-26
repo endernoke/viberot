@@ -48,9 +48,9 @@ impl ActionOrchestrator {
         }
 
         // Set environment variables
-        cmd.env("SIDEKICK_PID", event.pid.to_string());
-        cmd.env("SIDEKICK_COMMAND", &event.command);
-        cmd.env("SIDEKICK_TIMESTAMP", event.timestamp.to_string());
+        cmd.env("VIBEROT_PID", event.pid.to_string());
+        cmd.env("VIBEROT_COMMAND", &event.command);
+        cmd.env("VIBEROT_TIMESTAMP", event.timestamp.to_string());
 
         // Configure stdio
         cmd.stdin(Stdio::piped());

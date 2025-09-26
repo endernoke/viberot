@@ -1,6 +1,6 @@
-# Project Plan: Command-Sidekick
+# Project Plan: VibeRot
 
-This document outlines the project plan and architecture for "Command-Sidekick," a configurable utility to run actions based on command execution.
+This document outlines the project plan and architecture for "VibeRot," a configurable utility to run actions based on command execution.
 
 ## 1. Vision
 

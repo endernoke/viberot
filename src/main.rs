@@ -24,7 +24,7 @@ fn init_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let log_dir = get_log_dir()?;
     
     // Create a file appender that rotates daily
-    let file_appender = tracing_appender::rolling::daily(&log_dir, "command-sidekick.log");
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "viberot-service.log");
     
     // Create layers for logging
     let file_layer = tracing_subscriber::fmt::layer()
@@ -48,7 +48,7 @@ fn init_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .init();
         
     // Log the log file location
-    eprintln!("Command-Sidekick logs will be written to: {}", log_dir.join("command-sidekick.log").display());
+    eprintln!("VibeRot logs will be written to: {}", log_dir.join("viberot-service.log").display());
     
     Ok(())
 }
@@ -58,7 +58,7 @@ fn get_log_dir() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
         .ok_or("Could not find local data directory")?;
     
     let mut path = log_dir;
-    path.push("command-sidekick");
+    path.push("viberot-service");
     path.push("logs");
     
     if let Err(e) = std::fs::create_dir_all(&path) {
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logging
     init_logging()?;
 
-    info!("Starting Command-Sidekick Core Service");
+    info!("Starting VibeRot Core Service");
 
     // Load configuration
     let config_path = get_config_path()?;
@@ -176,8 +176,8 @@ fn get_config_path() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>
         .ok_or("Could not find config directory - this usually means the HOME environment variable is not set")?;
     
     let mut path = config_dir;
-    path.push("command-sidekick");
-    
+    path.push("viberot-service");
+
     if let Err(e) = std::fs::create_dir_all(&path) {
         return Err(format!("Failed to create config directory at {:?}: {}", path, e).into());
     }

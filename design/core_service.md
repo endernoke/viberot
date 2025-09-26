@@ -1,6 +1,6 @@
 # Core Service Architecture
 
-The Core Service is the central component of Command-Sidekick, written in Rust.
+The Core Service is the central component of VibeRot, written in Rust.
 
 ## Responsibilities
 
@@ -19,7 +19,7 @@ The Core Service is the central component of Command-Sidekick, written in Rust.
 
 4.  **Action Orchestration**:
     - When a rule is matched, spawn the corresponding Action Plugin as a child process.
-    - Pass relevant information to the plugin via environment variables or command-line arguments (e.g., `SIDEKICK_PID`, `SIDEKICK_COMMAND`).
+    - Pass relevant information to the plugin via environment variables or command-line arguments (e.g., `VIBEROT_PID`, `VIBEROT_COMMAND`).
 
 5.  **Process Lifecycle Management**:
     - Keep track of the PID of the monitored command.
@@ -29,8 +29,8 @@ The Core Service is the central component of Command-Sidekick, written in Rust.
 6.  **Embedded Lua Environment (for scripting)**:
     - Embed a Lua interpreter (using a crate like `mlua`).
     - Expose a minimal, safe API to the Lua scripts. For example:
-        - `sidekick.log(message)`: Log a message to the Core Service's log file.
-        - `sidekick.on_finish(callback)`: Register a function to be called when the monitored command completes.
+        - `viberot.log(message)`: Log a message to the Core Service's log file.
+        - `viberot.on_finish(callback)`: Register a function to be called when the monitored command completes.
 
 ## Rust Crates to Consider
 

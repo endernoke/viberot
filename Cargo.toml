@@ -1,14 +1,18 @@
 [package]
-name = "command-sidekick"
+name = "viberot"
 version = "0.1.0"
 edition = "2021"
-authors = ["Command-Sidekick Team"]
-description = "A configurable utility to run actions based on command execution"
+authors = ["James Zheng <endernoke@gmail.com>"]
+description = "Magnificent tool that autoplays brainrot while you're waiting for commands to complete"
+readme = "README.md"
 license = "MIT"
+keywords = ["brainrot", "command-line", "doomscrolling", "terminal", "windows"]
+categories = ["command-line-utilities", "development-tools", "multimedia"]
+exclude = ["examples/"]
 build = "build.rs"
 
 [[bin]]
-name = "sidekick-core"
+name = "viberot-service"
 path = "src/main.rs"
 
 [dependencies]

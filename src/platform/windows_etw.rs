@@ -140,11 +140,11 @@ impl PlatformProbeTrait for WindowsEtwProbe {
             
             // Stop any existing trace session with the same name to avoid conflicts.
             // This is useful if the application crashed previously and didn't clean up.
-            let _ = trace::stop_trace_by_name("CommandSidekickTrace");
+            let _ = trace::stop_trace_by_name("VibeRotServiceTrace");
 
             // Start the trace session
             let trace = match UserTrace::new()
-                .named(String::from("CommandSidekickTrace"))
+                .named(String::from("VibeRotServiceTrace"))
                 .enable(process_provider)
                 .start_and_process()
             {

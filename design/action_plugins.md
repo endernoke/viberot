@@ -6,8 +6,8 @@ The Action Plugin system is designed for maximum user flexibility, allowing for 
 
 - When a monitored command is detected, the Core Service executes the associated plugin as a new child process.
 - The Core Service passes context to the plugin via **environment variables**:
-    - `SIDEKICK_PID`: The Process ID of the monitored command.
-    - `SIDEKICK_COMMAND`: The full command line of the monitored command.
+    - `VIBEROT_PID`: The Process ID of the monitored command.
+    - `VIBEROT_COMMAND`: The full command line of the monitored command.
 - The plugin runs concurrently with the monitored command.
 
 ## Finish Notification
@@ -31,17 +31,17 @@ For simple, lightweight actions, users can write Lua scripts directly in the `co
     print("Starting git push...")
 
     -- Register a function to run when the push is done
-    sidekick.on_finish(function()
+    viberot.on_finish(function()
       print("Git push complete!")
     end)
   """
   ```
 
-- **Lua API (`sidekick` global table)**:
-  - `sidekick.on_finish(callback)`: The primary function. Registers a callback that will be invoked when the monitored command exits.
-  - `sidekick.log(message)`: Writes a message to the main service log.
-  - `sidekick.pid()`: Returns the PID of the monitored process.
-  - `sidekick.command()`: Returns the command line of the monitored process.
+- **Lua API (`viberot` global table)**:
+  - `viberot.on_finish(callback)`: The primary function. Registers a callback that will be invoked when the monitored command exits.
+  - `viberot.log(message)`: Writes a message to the main service log.
+  - `viberot.pid()`: Returns the PID of the monitored process.
+  - `viberot.command()`: Returns the command line of the monitored process.
 
 ---
 
@@ -66,7 +66,7 @@ For more complex tasks, users can specify any executable file or script.
   import sys
   import os
 
-  print(f"Docker build started with PID: {os.getenv('SIDEKICK_PID')}")
+  print(f"Docker build started with PID: {os.getenv('VIBEROT_PID')}")
 
   # This loop will run until stdin is closed by the Core Service
   for line in sys.stdin:

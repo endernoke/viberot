@@ -39,6 +39,7 @@ impl Config {
         Ok(config)
     }
 
+    #[allow(dead_code)]
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
@@ -46,7 +47,7 @@ impl Config {
     }
 
     pub fn save_with_comments<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let content = r#"# Command Sidekick Configuration File
+        let content = r#"# VibeRot Configuration File
 # 
 # This file defines rules for intercepting and handling commands.
 # Each rule consists of a command pattern and an action to execute.

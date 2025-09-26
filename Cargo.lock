@@ -88,26 +88,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
-name = "command-sidekick"
-version = "0.1.0"
-dependencies = [
- "dirs",
- "ferrisetw",
- "globset",
- "notify",
- "serde",
- "tasklist",
- "tokio",
- "toml 0.8.23",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "widestring",
- "windows 0.52.0",
- "winres",
-]
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1010,6 +990,26 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+
+[[package]]
+name = "viberot"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "ferrisetw",
+ "globset",
+ "notify",
+ "serde",
+ "tasklist",
+ "tokio",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "widestring",
+ "windows 0.52.0",
+ "winres",
+]
 
 [[package]]
 name = "walkdir"
