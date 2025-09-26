@@ -18,8 +18,7 @@
         "alwaysOnTop": true,
         "resizable": false,
         "decorations": false,
-        "center": true,
-        "url": "https://www.tiktok.com/foryou"
+        "center": true
       }
     ],
     "security": {
@@ -34,5 +33,24 @@
       "icons/128x128.png",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "Play tiktok as a translucent overlay over anything",
+      "args": [
+        {
+          "short": "O",
+          "name": "opacity",
+          "takesValue": true,
+          "description": "The opacity of the overlay window, between 0.0 and 1.0, defaults to 0.6"
+        },
+        {
+          "short": "u",
+          "name": "url",
+          "takesValue": true,
+          "description": "The URL to open, defaults to https://www.tiktok.com/foryou"
+        }
+      ]
+    }
   }
 }
