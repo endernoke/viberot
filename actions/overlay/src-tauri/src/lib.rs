@@ -28,16 +28,21 @@ pub fn run() {
                     
                     if let Some(url_arg) = matches.args.get("url") {
                         if let Some(url_str) = url_arg.value.as_str() {
-                            overlay_url = Url::parse(url_str).unwrap();
+                            overlay_url = Url::parse(url_str).unwrap_or(overlay_url.clone());
+                        }
+                    }
+
+                    if let Some(stdin_arg) = matches.args.get("exit-on-stdin-close") {
+                        if let Some(stdin_value) = stdin_arg.value.as_bool() {
+                            if stdin_value {
+                                setup_stdin_monitor(app.handle().clone());
+                            }
                         }
                     }
                 }
                 Err(_) => {}
             }
 
-            // Get app handle for terminating the application
-            let app_handle = app.handle().clone();
-            setup_stdin_monitor(app_handle);
             let window = app.get_webview_window("main").unwrap();
             window.navigate(overlay_url).unwrap();
             // Window transparency only affects the window frame, not the web content.
@@ -68,6 +73,8 @@ fn setup_stdin_monitor(app_handle: tauri::AppHandle) {
                 Err(e) => {
                     // Error reading from stdin (likely closed)
                     eprintln!("Error reading stdin: {}, terminating application", e);
+                    // Close window first to avoid resource leaks
+                    app_handle.get_webview_window("main").unwrap().close().unwrap();
                     app_handle.exit(1);
                     return;
                 }
@@ -76,6 +83,8 @@ fn setup_stdin_monitor(app_handle: tauri::AppHandle) {
 
         // If we exit the loop naturally (stdin closed)
         eprintln!("stdin closed, terminating application");
+        // Close window first to avoid resource leaks
+        app_handle.get_webview_window("main").unwrap().close().unwrap();
         app_handle.exit(0);
     });
 }

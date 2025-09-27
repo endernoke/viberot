@@ -24,6 +24,7 @@ npm run tauri build
 viberot-overlay [OPTIONS]
     -u, --url <URL>                URL to load in the overlay window [default: https://www.tiktok.com/foryou]
     -O, --opacity <OPACITY>        Opacity of the overlay window between 0.0 and 1.0 [default: 0.6]
+    --exit-on-stdin-close        Exit the application when stdin is closed (e.g. as a child process when the parent process exits). This option is used by VibeRot.
     -h, --help                     Display this help message and exit
     -v, --version                  Display version information and exit
 ```

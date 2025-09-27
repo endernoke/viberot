@@ -49,6 +49,11 @@
           "name": "url",
           "takesValue": true,
           "description": "The URL to open, defaults to https://www.tiktok.com/foryou"
+        },
+        {
+          "name": "exit-on-stdin-close",
+          "takesValue": false,
+          "description": "Exit the application when stdin is closed (e.g. as a child process when the parent process exits). This option is used by VibeRot."
         }
       ]
     }
