@@ -1,5 +1,6 @@
 use std::io::{BufRead, BufReader};
 use std::thread;
+use std::time::Duration;
 use tauri::Manager;
 use tauri_plugin_cli::CliExt;
 use url::Url;
@@ -47,7 +48,12 @@ pub fn run() {
             window.navigate(overlay_url).unwrap();
             // Window transparency only affects the window frame, not the web content.
             // so we need to inject some JS/CSS to make the web content transparent as well.
-            configure_window_content_opacity(&window, overlay_opacity);
+            
+            // Set up URL change listener to re-apply transparency when URL changes
+            let window_clone = window.clone();
+            add_url_change_listener(window_clone, move |_url| {
+                configure_window_content_opacity(&window, overlay_opacity);
+            });
 
             Ok(())
         })
@@ -114,4 +120,36 @@ fn configure_window_content_opacity(window: &tauri::WebviewWindow, opacity: f64)
 
     // Evaluate the JS code in the webview
     window.eval(js_code).unwrap();
+}
+
+fn add_url_change_listener<F>(window: tauri::WebviewWindow, mut callback: F)
+where
+    F: FnMut(&Url) + Send + 'static,
+{
+    thread::spawn(move || {
+        let mut current_url = match window.url() {
+            Ok(url) => url,
+            Err(_) => return, // Exit if we can't get the initial URL
+        };
+
+        // Call callback with initial URL
+        callback(&current_url);
+
+        loop {
+            thread::sleep(Duration::from_millis(500)); // Check every 500ms
+            
+            match window.url() {
+                Ok(new_url) => {
+                    if new_url != current_url {
+                        current_url = new_url.clone();
+                        callback(&new_url);
+                    }
+                }
+                Err(_) => {
+                    // If we can't get the URL, the window might be closed
+                    break;
+                }
+            }
+        }
+    });
 }
