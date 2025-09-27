@@ -8,7 +8,6 @@ use url::Url;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_cli::init())
-        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let mut overlay_opacity = 0.6;
             let mut overlay_url = Url::parse("https://www.tiktok.com/foryou").unwrap();
