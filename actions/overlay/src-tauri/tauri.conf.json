@@ -1,15 +1,15 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tiktok",
+  "productName": "viberot-overlay",
   "version": "0.1.0",
-  "identifier": "com.endernoke.tiktok",
+  "identifier": "com.endernoke.viberotoverlay",
   "build": {
     "frontendDist": "../src"
   },
   "app": {
     "windows": [
       {
-        "title": "tiktok",
+        "title": "VibeRot Overlay",
         "label": "main",
         "width": 800,
         "height": 600,
