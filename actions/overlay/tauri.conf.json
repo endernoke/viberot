@@ -4,23 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.endernoke.viberotoverlay",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "src-frontend"
   },
   "app": {
-    "windows": [
-      {
-        "title": "VibeRot Overlay",
-        "label": "main",
-        "width": 800,
-        "height": 600,
-        "fullscreen": true,
-        "transparent": true,
-        "alwaysOnTop": true,
-        "resizable": false,
-        "decorations": false,
-        "center": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }
