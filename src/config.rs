@@ -64,7 +64,7 @@ impl Config {
 # # Execute a program or script
 # [rules.action]
 # type = "exec"
-# path = "C:\\path\\to\\action.exe"  # Path to executable
+# path = "C:\\path\\to\\action.exe"  # Absolute path to executable
 # args = ["--arg1", "--arg2"]  # Optional arguments (remove this line if no args needed)
 #
 # [[rules]]
@@ -72,8 +72,36 @@ impl Config {
 # 
 # [rules.action]
 # type = "exec"
-# path = "python"  # Path to executable
+# path = "python"  # Executable name (searched in PATH)
 # args = ["C:\\path\\to\\python\\script", "--arg1"]  # Optional arguments (remove this line if no args needed)
+#
+# # Path Resolution:
+# # - Executable names (e.g., "python", "notepad.exe") are found via PATH
+# # - Absolute paths (e.g., "C:\path\to\action.exe") are used as-is
+# # - Relative paths are resolved relative to the viberot project root
+# # - Environment variables are supported:
+# #   - ${VIBEROT_HOME}: viberot project root
+# #   - ${VIBEROT_ACTIONS}: viberot/actions directory
+# #   - Other standard environment variables work too
+# #
+# # Examples:
+# # path = "actions/overlay/target/release/viberot-overlay.exe"  # Relative to project root
+# # path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe"
+# # path = "${USERPROFILE}/my-scripts/notify.py"
+
+[[rules]]
+command = "*cargo.exe build *" # This rule matches `cargo build`
+[rules.action]
+type = "exec"
+path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe" # enjoy your brainrot
+args = ["--exit-on-stdin-close"]
+
+[[rules]]
+command = "*cargo.exe run *"
+[rules.action]
+type = "exec"
+path = "python"
+args = ["actions/example/info.py"] # CWD is project root so python can find the script
 "#;
         std::fs::write(path, content)?;
         Ok(())
