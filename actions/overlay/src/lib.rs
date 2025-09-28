@@ -43,6 +43,8 @@ pub fn run() {
                 Err(_) => {}
             }
 
+            setup_ctrlc_handler(app.handle().clone());
+
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 let _ = tauri::WebviewWindowBuilder::new(&handle, "main", tauri::WebviewUrl::External(overlay_url))
@@ -101,7 +103,12 @@ fn setup_stdin_monitor(app_handle: tauri::AppHandle) {
                     // Error reading from stdin (likely closed)
                     eprintln!("Error reading stdin: {}, terminating application", e);
                     // Close window first to avoid resource leaks
-                    app_handle.get_webview_window("main").unwrap().close().unwrap();
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        if let Err(e) = window.close() {
+                            eprintln!("Error closing window: {}", e);
+                        }
+                    }
+        
                     app_handle.exit(1);
                     return;
                 }
@@ -109,9 +116,26 @@ fn setup_stdin_monitor(app_handle: tauri::AppHandle) {
         }
 
         // If we exit the loop naturally (stdin closed)
-        eprintln!("stdin closed, terminating application");
         // Close window first to avoid resource leaks
-        app_handle.get_webview_window("main").unwrap().close().unwrap();
+        if let Some(window) = app_handle.get_webview_window("main") {
+            if let Err(e) = window.close() {
+                eprintln!("Error closing window: {}", e);
+            }
+        }
+
         app_handle.exit(0);
     });
+}
+
+fn setup_ctrlc_handler(app_handle: tauri::AppHandle) {
+    ctrlc::set_handler(move || {        
+        // Close window first to avoid resource leaks
+        if let Some(window) = app_handle.get_webview_window("main") {
+            if let Err(e) = window.close() {
+                eprintln!("Error closing window: {}", e);
+            }
+        }
+
+        app_handle.exit(0);
+    }).expect("Error setting SIGINT handler");
 }
