@@ -8,6 +8,8 @@ Some commands take forever to run, and here you have the goated brainrot injecto
 [![Red Star OS](https://img.shields.io/badge/Red%20Star%20OS-WIP-orange)](https://github.com/endernoke/viberot)
 [![TempleOS](https://img.shields.io/badge/TempleOS-WIP-orange)](https://github.com/endernoke/viberot)
 
+https://github.com/user-attachments/assets/f7010183-602e-4f7a-a94f-7fc94571054d
+
 VibeRot is a background service that sniffs out slow ahh commands like `docker build` or `npm install` and blasts an overlay of pure brainrot. Watch the slop flow until your command finishes, then it will put the fries in the bag. No more productivity guilt; just vibes and rot. You will never have to go touch grass while waiting for deployment again.
 
 <img width="148" height="148" alt="wait faster meme" src="https://github.com/user-attachments/assets/2e809322-5aa8-4dc8-addf-4774a807f4a1" />
