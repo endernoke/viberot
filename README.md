@@ -148,8 +148,6 @@ VibeRot's built in Rust for speed and aura.
 
 ## Contributing
 
-## Contributing
-
 Contributions are welcome! Here's how to get started:
 
 1. Pay your fanum tax by starring the repo, it means a lot :>
@@ -170,5 +168,7 @@ Apart from code contributions, you can also help by:
 ## License
 
 We firmly believe degeneracy is a fundamental human right and should be free and accessible to all. VibeRot is open source under the MIT License. See [LICENSE](LICENSE).
+
+## Credits
 
 Shoutout to [Jet](https://github.com/supreme-gg-gg) for coming up with the based idea of autoplaying reels while waiting for commands to complete.
