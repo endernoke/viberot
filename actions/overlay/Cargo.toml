@@ -15,14 +15,14 @@ name = "viberot_overlay_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = "2.4.1"
 
 [dependencies]
-tauri = { version = "2", features = ["unstable"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-url = "2"
-ctrlc = "3"
+tauri = "2.8.5"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+url = "2.5.7"
+ctrlc = "3.5.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-cli = "2"
+tauri-plugin-cli = "2.4.0"
