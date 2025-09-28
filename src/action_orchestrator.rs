@@ -1,6 +1,6 @@
 use crate::config::Action;
 use crate::platform::ProcessEvent;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::process::Stdio;
 use std::path::PathBuf;
 use std::env;
@@ -11,16 +11,19 @@ use tracing::{info, warn, debug};
 
 pub struct ActionOrchestrator {
     active_actions: Arc<RwLock<HashMap<u32, ActiveAction>>>,
+    running_single_instance_actions: Arc<RwLock<HashSet<String>>>,
 }
 
 pub struct ActiveAction {
     pub child: tokio::process::Child,
+    pub action: Action,
 }
 
 impl ActionOrchestrator {
     pub fn new() -> Self {
         Self {
             active_actions: Arc::new(RwLock::new(HashMap::new())),
+            running_single_instance_actions: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -76,6 +79,29 @@ impl ActionOrchestrator {
         Ok(result)
     }
     
+    /// Checks if the action is configured to run as a single instance
+    fn is_single_instance(&self, action: &Action) -> bool {
+        match action {
+            Action::Executable { single_instance, .. } => *single_instance,
+            Action::Lua { single_instance, .. } => *single_instance,
+        }
+    }
+    
+    /// Gets a unique key for the action to track single instances
+    fn get_action_key(&self, action: &Action) -> String {
+        match action {
+            Action::Executable { path, args, .. } => {
+                let args_str = args.as_ref()
+                    .map(|a| a.join(" "))
+                    .unwrap_or_default();
+                format!("exec:{}:{}", path, args_str)
+            }
+            Action::Lua { script, .. } => {
+                format!("lua:{}", script)
+            }
+        }
+    }
+
     /// Gets the viberot project root directory
     fn get_viberot_root(&self) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
         // Try to find the project root by looking for Cargo.toml starting from current exe
@@ -111,11 +137,25 @@ impl ActionOrchestrator {
     }
 
     pub async fn start_action(&self, action: Action, event: &ProcessEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        match action {
-            Action::Executable { path, args } => {
-                self.start_executable_action(path, args, event).await
+        // Check if this is a single-instance action and if it's already running
+        if self.is_single_instance(&action) {
+            let action_key = self.get_action_key(&action);
+            let mut running_actions = self.running_single_instance_actions.write().await;
+            
+            if running_actions.contains(&action_key) {
+                info!("Single-instance action '{}' is already running, skipping", action_key);
+                return Ok(());
             }
-            Action::Lua { script: _ } => {
+            
+            // Mark this action as running
+            running_actions.insert(action_key.clone());
+        }
+        
+        match action.clone() {
+            Action::Executable { path, args, single_instance: _ } => {
+                self.start_executable_action(path, args, action, event).await
+            }
+            Action::Lua { script: _, single_instance: _ } => {
                 // TODO: Implement Lua execution in future milestones
                 warn!("Lua actions not yet implemented");
                 Ok(())
@@ -127,6 +167,7 @@ impl ActionOrchestrator {
         &self,
         path: String,
         args: Option<Vec<String>>,
+        action: Action,
         event: &ProcessEvent,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Resolve the path with environment variable expansion and predictable relative path handling
@@ -174,6 +215,7 @@ impl ActionOrchestrator {
         // Store the active action
         let active_action = ActiveAction {
             child,
+            action,
         };
 
         {
@@ -213,6 +255,12 @@ impl ActionOrchestrator {
             }
         }
         
+        // Clear all single instance tracking
+        {
+            let mut running_actions = self.running_single_instance_actions.write().await;
+            running_actions.clear();
+        }
+        
         info!("Action orchestrator shutdown complete");
         Ok(())
     }
@@ -224,6 +272,14 @@ impl ActionOrchestrator {
         
         if let Some(mut active_action) = active_actions.remove(&target_pid) {
             info!("Finishing action for process {}", target_pid);
+            
+            // Clean up single instance tracking if this action was configured as single instance
+            if self.is_single_instance(&active_action.action) {
+                let action_key = self.get_action_key(&active_action.action);
+                let mut running_actions = self.running_single_instance_actions.write().await;
+                running_actions.remove(&action_key);
+                debug!("Removed single-instance action '{}' from tracking", action_key);
+            }
             
             // Close stdin to signal the action plugin that the command is finished
             if let Some(stdin) = active_action.child.stdin.take() {

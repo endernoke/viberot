@@ -17,9 +17,18 @@ pub struct Rule {
 #[serde(tag = "type")]
 pub enum Action {
     #[serde(rename = "exec")]
-    Executable { path: String, args: Option<Vec<String>> },
+    Executable { 
+        path: String, 
+        args: Option<Vec<String>>,
+        #[serde(default)]
+        single_instance: bool,
+    },
     #[serde(rename = "lua")]
-    Lua { script: String },
+    Lua { 
+        script: String,
+        #[serde(default)]
+        single_instance: bool,
+    },
 }
 
 impl Config {
@@ -66,6 +75,7 @@ impl Config {
 # type = "exec"
 # path = "C:\\path\\to\\action.exe"  # Absolute path to executable
 # args = ["--arg1", "--arg2"]  # Optional arguments (remove this line if no args needed)
+# single_instance = true  # Optional: only allow one instance of this action to run at a time (default: false)
 #
 # [[rules]]
 # command = "*pip.exe install *"
@@ -74,6 +84,7 @@ impl Config {
 # type = "exec"
 # path = "python"  # Executable name (searched in PATH)
 # args = ["C:\\path\\to\\python\\script", "--arg1"]  # Optional arguments (remove this line if no args needed)
+# single_instance = false  # Optional: allow multiple instances (default: false)
 #
 # # Path Resolution:
 # # - Executable names (e.g., "python", "notepad.exe") are found via PATH
@@ -90,18 +101,20 @@ impl Config {
 # # path = "${USERPROFILE}/my-scripts/notify.py"
 
 [[rules]]
-command = "*cargo.exe build *" # This rule matches `cargo build`
+command = "*cargo.exe build*" # This rule matches any `cargo build` command
 [rules.action]
 type = "exec"
 path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe" # enjoy your brainrot
 args = ["--exit-on-stdin-close"]
+single_instance = true # Only allow one overlay instance at a time
 
 [[rules]]
-command = "*cargo.exe run *"
+command = "*cargo.exe run*"
 [rules.action]
 type = "exec"
 path = "python"
 args = ["actions/example/info.py"] # CWD is project root so python can find the script
+single_instance = false # Allow multiple instances (default behavior)
 "#;
         std::fs::write(path, content)?;
         Ok(())
