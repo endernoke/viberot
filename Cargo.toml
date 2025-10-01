@@ -1,6 +1,6 @@
 [package]
 name = "viberot"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["James Zheng <endernoke@gmail.com>"]
 description = "Magnificent tool that autoplays brainrot while you're waiting for commands to complete"
