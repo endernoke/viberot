@@ -7,6 +7,13 @@ pub mod windows_etw;
 #[cfg(windows)]
 pub use windows_etw::WindowsEtwProbe as PlatformProbe;
 
+// Stub implementation for non-Windows platforms
+#[cfg(not(windows))]
+pub mod stub;
+
+#[cfg(not(windows))]
+pub use stub::StubProbe as PlatformProbe;
+
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
