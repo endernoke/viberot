@@ -62,7 +62,7 @@ impl WindowsEtwProbe {
                             debug!("Failed to get command line via tasklist for PID {}: {:?}", pid, e);
                             String::from("<unknown>")
                         }).replace('\0', ""); // Remove null chars
-                        let process_event = ProcessEvent::new(pid, command_line);
+                        let process_event = ProcessEvent::new(pid, command_line, crate::platform::ProbeSource::WindowsEtw);
                         let lifecycle_event = ProcessLifecycleEvent::Started(process_event);
                         
                         if let Err(e) = sender.send(lifecycle_event) {
@@ -200,5 +200,9 @@ impl PlatformProbeTrait for WindowsEtwProbe {
         }
 
         Ok(())
+    }
+
+    fn get_capability(&self) -> crate::platform::PlatformCapability {
+        crate::platform::PlatformCapability::SystemWide
     }
 }

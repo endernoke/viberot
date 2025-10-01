@@ -192,6 +192,24 @@ impl ActionOrchestrator {
         cmd.env("VIBEROT_COMMAND", &event.command);
         cmd.env("VIBEROT_TIMESTAMP", event.timestamp.to_string());
         
+        if let Some(ref wd) = event.working_directory {
+            cmd.env("VIBEROT_WORKING_DIRECTORY", wd);
+        }
+        
+        if let Some(ref session_id) = event.shell_session_id {
+            cmd.env("VIBEROT_SHELL_SESSION_ID", session_id);
+        }
+        
+        // Add note about synthetic PIDs for shell probe
+        match event.probe_source {
+            crate::platform::ProbeSource::LinuxShell => {
+                cmd.env("VIBEROT_PID_TYPE", "synthetic");
+            }
+            _ => {
+                cmd.env("VIBEROT_PID_TYPE", "system");
+            }
+        }
+        
         // Also provide the viberot root as an environment variable for the action
         if let Ok(viberot_root) = self.get_viberot_root() {
             cmd.env("VIBEROT_HOME", viberot_root.to_string_lossy().as_ref());
@@ -209,8 +227,13 @@ impl ActionOrchestrator {
         })?;
         let child_pid = child.id().unwrap_or(0);
 
-        info!("Started action plugin '{}' with PID {} for monitored process {}", 
-              resolved_path.display(), child_pid, event.pid);
+        let pid_type = match event.probe_source {
+            crate::platform::ProbeSource::LinuxShell => "synthetic",
+            _ => "system",
+        };
+
+        info!("Started action plugin '{}' with PID {} for monitored {} PID {}", 
+              resolved_path.display(), child_pid, pid_type, event.pid);
 
         // Store the active action
         let active_action = ActiveAction {
@@ -218,6 +241,7 @@ impl ActionOrchestrator {
             action,
         };
 
+        // Store by PID (synthetic or real)
         {
             let mut active_actions = self.active_actions.write().await;
             active_actions.insert(event.pid, active_action);
@@ -229,30 +253,11 @@ impl ActionOrchestrator {
     /// Gracefully shutdown all active actions
     pub async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Shutting down action orchestrator...");
-        let mut active_actions = self.active_actions.write().await;
         
-        for (pid, mut active_action) in active_actions.drain() {
-            info!("Terminating action for process {}", pid);
-            
-            // Close stdin to signal the action plugin
-            if let Some(stdin) = active_action.child.stdin.take() {
-                drop(stdin);
-            }
-            
-            // Give the process time to exit gracefully, then force kill
-            // Tbh we should let the child decide what to do instead of killing it
-            match tokio::time::timeout(
-                tokio::time::Duration::from_secs(3),
-                active_action.child.wait()
-            ).await {
-                Ok(_) => {
-                    // Process exited gracefully
-                }
-                Err(_) => {
-                    info!("Action for process {} did not exit gracefully, force killing", pid);
-                    let _ = active_action.child.kill().await;
-                }
-            }
+        let mut active_actions = self.active_actions.write().await;
+        for (pid, active_action) in active_actions.drain() {
+            info!("Terminating action for PID {}", pid);
+            self.terminate_action(active_action, &format!("PID {}", pid), true).await;
         }
         
         // Clear all single instance tracking
@@ -265,13 +270,61 @@ impl ActionOrchestrator {
         Ok(())
     }
 
-    /// Called when the ETW probe detects that a monitored process has ended
-    /// This replaces the previous polling-based approach
+    /// Terminates a child action process gracefully with fallback to force kill
+    /// 
+    /// # Arguments
+    /// * `active_action` - The action to terminate
+    /// * `target_name` - Human-readable identifier for logging
+    /// * `wait_for_completion` - If true, waits for termination; if false, spawns async task
+    async fn terminate_action(&self, mut active_action: ActiveAction, target_name: &str, wait_for_completion: bool) {
+        // Close stdin to signal the action plugin
+        if let Some(stdin) = active_action.child.stdin.take() {
+            drop(stdin);
+        }
+        
+        if wait_for_completion {
+            // Synchronous termination for shutdown scenarios
+            self.terminate_action_sync(&mut active_action, target_name).await;
+        } else {
+            // Asynchronous termination for runtime scenarios
+            let target_name = target_name.to_string();
+            tokio::spawn(async move {
+                Self::terminate_action_async(active_action, &target_name).await;
+            });
+        }
+    }
+    
+    /// Synchronous termination with timeout and force kill
+    async fn terminate_action_sync(&self, active_action: &mut ActiveAction, target_name: &str) {
+        match tokio::time::timeout(
+            tokio::time::Duration::from_secs(3),
+            active_action.child.wait()
+        ).await {
+            Ok(_) => {
+                debug!("Action for {} exited gracefully", target_name);
+            }
+            Err(_) => {
+                info!("Action for {} did not exit gracefully, force killing", target_name);
+                let _ = active_action.child.kill().await;
+            }
+        }
+    }
+    
+    /// Asynchronous termination with delayed force kill
+    async fn terminate_action_async(mut active_action: ActiveAction, target_name: &str) {
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+        if let Err(_e) = active_action.child.kill().await {
+            // Process already exited, which is fine
+            debug!("Action for {} already exited", target_name);
+        }
+    }
+
+    /// Called when a probe detects that a monitored process has ended
     pub async fn finish_action(&self, target_pid: u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_actions = self.active_actions.write().await;
         
-        if let Some(mut active_action) = active_actions.remove(&target_pid) {
-            info!("Finishing action for process {}", target_pid);
+        if let Some(active_action) = active_actions.remove(&target_pid) {
+            info!("Finishing action for PID {}", target_pid);
             
             // Clean up single instance tracking if this action was configured as single instance
             if self.is_single_instance(&active_action.action) {
@@ -281,18 +334,10 @@ impl ActionOrchestrator {
                 debug!("Removed single-instance action '{}' from tracking", action_key);
             }
             
-            // Close stdin to signal the action plugin that the command is finished
-            if let Some(stdin) = active_action.child.stdin.take() {
-                drop(stdin); // Dropping stdin closes it
-            }
-
-            // Give the process a moment to clean up, then force kill if necessary
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                if let Err(_e) = active_action.child.kill().await {
-                    // Process already exited, which is fine
-                }
-            });
+            // Terminate the action asynchronously to avoid blocking the event loop
+            self.terminate_action(active_action, &format!("PID {}", target_pid), false).await;
+        } else {
+            debug!("No active action found for PID {}", target_pid);
         }
 
         Ok(())

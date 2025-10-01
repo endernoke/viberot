@@ -42,4 +42,8 @@ impl PlatformProbeTrait for StubProbe {
         // Nothing to stop for stub implementation
         Ok(())
     }
+
+    fn get_capability(&self) -> crate::platform::PlatformCapability {
+        crate::platform::PlatformCapability::Polling
+    }
 }
