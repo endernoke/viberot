@@ -18,9 +18,9 @@ use crate::platform::{PlatformProbeTrait, ProcessLifecycleEvent, ProcessEvent, P
 /// to avoid collision with real system PIDs
 static SYNTHETIC_PID_COUNTER: AtomicU32 = AtomicU32::new(1_000_000);
 
-/// Linux shell-based process probe
+/// POSIX shell-based process probe
 /// Uses shell hooks to monitor command execution in bash/zsh
-pub struct LinuxShellProbe {
+pub struct PosixShellProbe {
     lifecycle_sender: broadcast::Sender<ProcessLifecycleEvent>,
     socket_path: PathBuf,
     listener: Arc<Mutex<Option<UnixListener>>>,
@@ -46,7 +46,7 @@ enum ShellEventType {
     CommandEnd,
 }
 
-impl LinuxShellProbe {
+impl PosixShellProbe {
     pub fn new(lifecycle_sender: broadcast::Sender<ProcessLifecycleEvent>) -> Self {
         let socket_path = Self::get_socket_path();
         
@@ -350,7 +350,7 @@ fi
                                 // Generate synthetic PID for this command
                                 let synthetic_pid = Self::generate_synthetic_pid();
                             
-                                let mut event = ProcessEvent::new(synthetic_pid, command, ProbeSource::LinuxShell)
+                                let mut event = ProcessEvent::new(synthetic_pid, command, ProbeSource::PosixShell)
                                     .with_shell_session_id(msg.session_id.clone());
 
                                 // Decode working directory from base64 or use plain text
@@ -417,9 +417,9 @@ fi
     }
 }
 
-impl PlatformProbeTrait for LinuxShellProbe {
+impl PlatformProbeTrait for PosixShellProbe {
     async fn start(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Starting Linux shell probe for process monitoring");
+        info!("Starting POSIX shell probe for process monitoring");
 
         // First, set up shell hooks (with user approval)
         if let Err(e) = self.setup_shell_hooks().await {
@@ -450,7 +450,7 @@ impl PlatformProbeTrait for LinuxShellProbe {
             sessions.clear();
         }
 
-        info!("Linux shell probe stopped");
+        info!("POSIX shell probe stopped");
         Ok(())
     }
 

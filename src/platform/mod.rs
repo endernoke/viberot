@@ -7,18 +7,18 @@ pub mod windows_etw;
 #[cfg(windows)]
 pub use windows_etw::WindowsEtwProbe as PlatformProbe;
 
-// Linux shell probe
-#[cfg(target_os = "linux")]
-pub mod linux_shell;
+// POSIX shell probe
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub mod posix_shell;
 
-#[cfg(target_os = "linux")]
-pub use linux_shell::LinuxShellProbe as PlatformProbe;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub use posix_shell::PosixShellProbe as PlatformProbe;
 
 // Stub implementation for other platforms
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub mod stub;
 
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub use stub::StubProbe as PlatformProbe;
 
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProbeSource {
     WindowsEtw,
-    LinuxShell,
+    PosixShell,
     MacOsDtrace,
     // Future: LinuxEbpf, etc.
 }
@@ -102,13 +102,13 @@ pub fn detect_best_probe(
         (probe, PlatformCapability::SystemWide)
     }
     
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         let probe = PlatformProbe::new(lifecycle_sender);
         (probe, PlatformCapability::ShellOnly)
     }
     
-    #[cfg(not(any(windows, target_os = "linux")))]
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
     {
         let probe = PlatformProbe::new(lifecycle_sender);
         (probe, PlatformCapability::Polling) // Stub implementation

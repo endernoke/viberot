@@ -202,7 +202,7 @@ impl ActionOrchestrator {
         
         // Add note about synthetic PIDs for shell probe
         match event.probe_source {
-            crate::platform::ProbeSource::LinuxShell => {
+            crate::platform::ProbeSource::PosixShell => {
                 cmd.env("VIBEROT_PID_TYPE", "synthetic");
             }
             _ => {
@@ -228,7 +228,7 @@ impl ActionOrchestrator {
         let child_pid = child.id().unwrap_or(0);
 
         let pid_type = match event.probe_source {
-            crate::platform::ProbeSource::LinuxShell => "synthetic",
+            crate::platform::ProbeSource::PosixShell => "synthetic",
             _ => "system",
         };
 
