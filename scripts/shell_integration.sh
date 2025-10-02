@@ -32,14 +32,21 @@ if [[ -z "$ZSH_VERSION" && -z "$bash_preexec_imported" ]]; then
     echo "VibeRot error: preexec and precmd not available" >&2
     return 1
 fi
-if [[ -z "$VIBEROT_SOCKET_PATH" ]]; then
-    # Fail silently because he user may not always want to enable VibeRot
+# Read socket path from config file
+_viberot_config_file="$HOME/.viberot/.socket"
+if [[ ! -f "$_viberot_config_file" ]]; then
+    # Fail silently because the user may not always want to enable VibeRot
+    return 0
+fi
+
+# Read the socket path from the config file
+_viberot_socket_path=$(cat "$_viberot_config_file" 2>/dev/null | head -n 1 | tr -d '\n\r')
+if [[ -z "$_viberot_socket_path" ]]; then
+    # Fail silently if socket path is empty
     return 0
 fi
 
 readonly VIBEROT_ENABLED=1
-
-_viberot_socket_path="$VIBEROT_SOCKET_PATH"
 
 # Function to base64 encode strings safely
 _viberot_base64_encode() {
