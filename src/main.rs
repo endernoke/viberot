@@ -55,11 +55,11 @@ fn init_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn get_log_dir() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-    let log_dir = dirs::data_local_dir()
-        .ok_or("Could not find local data directory")?;
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory")?;
     
-    let mut path = log_dir;
-    path.push("viberot-service");
+    let mut path = home_dir;
+    path.push(".viberot");
     path.push("logs");
     
     if let Err(e) = std::fs::create_dir_all(&path) {
@@ -177,11 +177,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn get_config_path() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-    let config_dir = dirs::config_dir()
-        .ok_or("Could not find config directory - this usually means the HOME environment variable is not set")?;
-    
-    let mut path = config_dir;
-    path.push("viberot-service");
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory - this usually means the HOME environment variable is not set")?;
+
+    let mut path = home_dir;
+    path.push(".viberot");
 
     if let Err(e) = std::fs::create_dir_all(&path) {
         return Err(format!("Failed to create config directory at {:?}: {}", path, e).into());
