@@ -11,7 +11,7 @@ pub struct RuleEngine {
 struct CachedGlobData {
     config_hash: u64,
     glob_set: GlobSet,
-    rules: Vec<Action>,
+    rule_actions: Vec<Vec<Action>>,
 }
 
 impl RuleEngine {
@@ -21,7 +21,7 @@ impl RuleEngine {
         }
     }
 
-    pub async fn match_command(&self, command: &str, config: &Config) -> Option<Action> {
+    pub async fn match_command(&self, command: &str, config: &Config) -> Vec<Action> {
         // Check if we need to rebuild the cache
         let config_hash = self.calculate_config_hash(config);
         
@@ -31,10 +31,11 @@ impl RuleEngine {
                 if data.config_hash == config_hash {
                     // Cache hit - use existing glob set
                     let matches = data.glob_set.matches(command);
-                    if let Some(&first_match) = matches.first() {
-                        return Some(data.rules[first_match].clone());
+                    let mut all_actions = Vec::new();
+                    for &match_idx in matches.iter() {
+                        all_actions.extend(data.rule_actions[match_idx].iter().cloned());
                     }
-                    return None;
+                    return all_actions;
                 }
             }
         }
@@ -46,26 +47,33 @@ impl RuleEngine {
         let cached_data = self.cached_glob_data.read().await;
         if let Some(ref data) = *cached_data {
             let matches = data.glob_set.matches(command);
-            if let Some(&first_match) = matches.first() {
-                return Some(data.rules[first_match].clone());
+            let mut all_actions = Vec::new();
+            for &match_idx in matches.iter() {
+                all_actions.extend(data.rule_actions[match_idx].iter().cloned());
             }
+            return all_actions;
         }
 
-        None
+        Vec::new()
     }
 
     async fn rebuild_cache(&self, config: &Config, config_hash: u64) {
         let mut builder = GlobSetBuilder::new();
-        let mut rules = Vec::new();
+        let mut rule_actions = Vec::new();
         
         for rule in config.rules.iter() {
-            match Glob::new(&rule.command) {
-                Ok(glob) => {
-                    builder.add(glob);
-                    rules.push(rule.action.clone());
-                }
-                Err(e) => {
-                    error!("Invalid glob pattern '{}': {}", rule.command, e);
+            let commands = rule.command.as_vec();
+            let actions = rule.action.as_vec().into_iter().cloned().collect::<Vec<_>>();
+            
+            for command in commands {
+                match Glob::new(command) {
+                    Ok(glob) => {
+                        builder.add(glob);
+                        rule_actions.push(actions.clone());
+                    }
+                    Err(e) => {
+                        error!("Invalid glob pattern '{}': {}", command, e);
+                    }
                 }
             }
         }
@@ -75,7 +83,7 @@ impl RuleEngine {
                 let new_data = CachedGlobData {
                     config_hash,
                     glob_set,
-                    rules,
+                    rule_actions,
                 };
                 
                 let mut cached_data = self.cached_glob_data.write().await;

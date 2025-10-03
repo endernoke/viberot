@@ -8,9 +8,25 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Hash)]
+#[serde(untagged)]
+pub enum Commands {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
+#[serde(untagged)]
+pub enum Actions {
+    Single(Action),
+    Multiple(Vec<Action>),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 pub struct Rule {
-    pub command: String,
-    pub action: Action,
+    #[serde(alias = "commands")]
+    pub command: Commands,
+    #[serde(alias = "actions")]
+    pub action: Actions,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Hash)]
@@ -59,65 +75,116 @@ impl Config {
         let content = r#"# VibeRot Configuration File
 # 
 # This file defines rules for intercepting and handling commands.
-# Each rule consists of a command pattern and an action to execute.
-
-# Example configuration structure:
+# Each rule consists of command pattern(s) and action(s) to execute.
 #
+# Rules support the following:
+# - Single command or array of commands
+# - Single action or array of actions
+
+# Example configuration structures:
+
+# Basic rule with single command and single action:
 # [[rules]]
 # command = "*npm-cli.js* install *"
-# # Use the above pattern to match "npm install" 
-# # because when you run npm install, the actual 
-# # expanded commandline is something like 
-# # '"/path/to/nodejs" "/path/to/npm-cli.js" install ...'
-# 
-# # Execute a program or script
 # [rules.action]
 # type = "exec"
-# path = "C:\\path\\to\\action.exe"  # Absolute path to executable
-# args = ["--arg1", "--arg2"]  # Optional arguments (remove this line if no args needed)
-# single_instance = true  # Optional: only allow one instance of this action to run at a time (default: false)
-#
+# path = "C:\\path\\to\\action.exe"
+# args = ["--arg1", "--arg2"]
+# single_instance = true
+
+# Rule with multiple commands mapping to the same action:
 # [[rules]]
-# command = "*pip.exe install *"
-# 
+# command = ["*cargo.exe build*", "*cargo.exe check*", "*cargo.exe test*"]
 # [rules.action]
 # type = "exec"
-# path = "python"  # Executable name (searched in PATH)
-# args = ["C:\\path\\to\\python\\script", "--arg1"]  # Optional arguments (remove this line if no args needed)
-# single_instance = false  # Optional: allow multiple instances (default: false)
-#
-# # Path Resolution:
-# # - Executable names (e.g., "python", "notepad.exe") are found via PATH
-# # - Absolute paths (e.g., "C:\path\to\action.exe") are used as-is
-# # - Relative paths are resolved relative to the viberot project root
-# # - Environment variables are supported:
-# #   - ${VIBEROT_HOME}: viberot project root
-# #   - ${VIBEROT_ACTIONS}: viberot/actions directory
-# #   - Other standard environment variables work too
-# #
-# # Examples:
-# # path = "actions/overlay/target/release/viberot-overlay.exe"  # Relative to project root
-# # path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe"
-# # path = "${USERPROFILE}/my-scripts/notify.py"
+# path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe"
+# args = ["--exit-on-stdin-close"]
+# single_instance = true
 
+# Rule with single command mapping to multiple actions:
+# [[rules]]
+# command = "*docker* build*"
+# action = [
+#   { type = "exec", path = "python", args = ["actions/example/info.py"] },
+#   { type = "exec", path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe", args = ["--exit-on-stdin-close"], single_instance = true }
+# ]
+
+# Rule with multiple commands mapping to multiple actions:
+# [[rules]]
+# command = ["*npm* install*", "*yarn* install*", "*pnpm* install*"]
+# action = [
+#   { type = "exec", path = "python", args = ["scripts/package-install-notify.py"] },
+#   { type = "exec", path = "notepad.exe", args = ["package-install-log.txt"] }
+# ]
+
+# Alternative syntax using aliases:
+# [[rules]]
+# commands = ["*git* push*", "*git* pull*"]  # "commands" is an alias for "command"
+# actions = [                               # "actions" is an alias for "action"
+#   { type = "exec", path = "python", args = ["scripts/git-notify.py"] }
+# ]
+
+# Path Resolution:
+# - Executable names (e.g., "python", "notepad.exe") are found via PATH
+# - Absolute paths (e.g., "C:\path\to\action.exe") are used as-is
+# - Relative paths are resolved relative to the viberot project root
+# - Environment variables are supported:
+#   - ${VIBEROT_HOME}: viberot project root
+#   - ${VIBEROT_ACTIONS}: viberot/actions directory
+#   - Other standard environment variables work too
+
+# Single command and single action
 [[rules]]
-command = "*cargo.exe build*" # This rule matches any `cargo build` command
+command = "*cargo build*"
 [rules.action]
 type = "exec"
-path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay.exe" # enjoy your brainrot
+path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay"
 args = ["--exit-on-stdin-close"]
-single_instance = true # Only allow one overlay instance at a time
+single_instance = true
 
+# Multiple commands with same action
 [[rules]]
-command = "*cargo.exe run*"
+command = ["*cargo build*", "*cargo run*"]
 [rules.action]
 type = "exec"
-path = "python"
+path = "python3"
 args = ["actions/example/info.py"] # CWD is project root so python can find the script
 single_instance = false # Allow multiple instances (default behavior)
-"#;
+
+# Single command with multiple actions
+[[rules]]
+command = "*cargo install*"
+action = [
+  { type = "exec", path = "sh", args = ["-c", "while true; do echo -ne '\\a'; sleep 0.1; done"], single_instance = true },
+  { type = "exec", path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay", args = ["--exit-on-stdin-close"], single_instance = true }
+]"#;
         std::fs::write(path, content)?;
         Ok(())
+    }
+}
+
+impl Commands {
+    pub fn as_vec(&self) -> Vec<&String> {
+        match self {
+            Commands::Single(cmd) => vec![cmd],
+            Commands::Multiple(cmds) => cmds.iter().collect(),
+        }
+    }
+}
+
+impl Actions {
+    pub fn as_vec(&self) -> Vec<&Action> {
+        match self {
+            Actions::Single(action) => vec![action],
+            Actions::Multiple(actions) => actions.iter().collect(),
+        }
+    }
+    
+    pub fn into_vec(self) -> Vec<Action> {
+        match self {
+            Actions::Single(action) => vec![action],
+            Actions::Multiple(actions) => actions,
+        }
     }
 }
 

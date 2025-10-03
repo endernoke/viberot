@@ -132,12 +132,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         
                         // Match against rules
                         let config_guard = config.read().await;
-                        if let Some(action) = rule_engine.match_command(&event.command, &config_guard).await {
-                            info!("Rule matched, starting action: {:?}", action);
+                        let actions = rule_engine.match_command(&event.command, &config_guard).await;
+                        if !actions.is_empty() {
+                            info!("Rule matched, starting {} action(s): {:?}", actions.len(), actions);
                             
-                            // Start the action
-                            if let Err(e) = action_orchestrator.start_action(action, &event).await {
-                                error!("Failed to start action: {}", e);
+                            // Start all matching actions
+                            if let Err(e) = action_orchestrator.start_actions(actions, &event).await {
+                                error!("Failed to start actions: {}", e);
                             }
                         }
                     }

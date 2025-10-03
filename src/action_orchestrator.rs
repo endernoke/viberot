@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tracing::{info, warn, debug};
 
 pub struct ActionOrchestrator {
-    active_actions: Arc<RwLock<HashMap<u32, ActiveAction>>>,
+    active_actions: Arc<RwLock<HashMap<u32, Vec<ActiveAction>>>>,
     running_single_instance_actions: Arc<RwLock<HashSet<String>>>,
 }
 
@@ -163,6 +163,23 @@ impl ActionOrchestrator {
         }
     }
 
+    pub async fn start_actions(&self, actions: Vec<Action>, event: &ProcessEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut errors = Vec::new();
+        
+        for action in actions {
+            if let Err(e) = self.start_action(action, event).await {
+                errors.push(e);
+            }
+        }
+        
+        if !errors.is_empty() {
+            let error_messages: Vec<String> = errors.into_iter().map(|e| e.to_string()).collect();
+            return Err(format!("Failed to start {} action(s): {}", error_messages.len(), error_messages.join("; ")).into());
+        }
+        
+        Ok(())
+    }
+
     async fn start_executable_action(
         &self,
         path: String,
@@ -244,7 +261,7 @@ impl ActionOrchestrator {
         // Store by PID (synthetic or real)
         {
             let mut active_actions = self.active_actions.write().await;
-            active_actions.insert(event.pid, active_action);
+            active_actions.entry(event.pid).or_insert_with(Vec::new).push(active_action);
         }
 
         Ok(())
@@ -255,9 +272,11 @@ impl ActionOrchestrator {
         info!("Shutting down action orchestrator...");
         
         let mut active_actions = self.active_actions.write().await;
-        for (pid, active_action) in active_actions.drain() {
-            info!("Terminating action for PID {}", pid);
-            self.terminate_action(active_action, &format!("PID {}", pid), true).await;
+        for (pid, action_list) in active_actions.drain() {
+            info!("Terminating {} action(s) for PID {}", action_list.len(), pid);
+            for active_action in action_list {
+                self.terminate_action(active_action, &format!("PID {}", pid), true).await;
+            }
         }
         
         // Clear all single instance tracking
@@ -323,21 +342,27 @@ impl ActionOrchestrator {
     pub async fn finish_action(&self, target_pid: u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut active_actions = self.active_actions.write().await;
         
-        if let Some(active_action) = active_actions.remove(&target_pid) {
-            info!("Finishing action for PID {}", target_pid);
+        if let Some(action_list) = active_actions.remove(&target_pid) {
+            info!("Finishing {} action(s) for PID {}", action_list.len(), target_pid);
             
-            // Clean up single instance tracking if this action was configured as single instance
-            if self.is_single_instance(&active_action.action) {
-                let action_key = self.get_action_key(&active_action.action);
+            // Clean up single instance tracking for all actions
+            {
                 let mut running_actions = self.running_single_instance_actions.write().await;
-                running_actions.remove(&action_key);
-                debug!("Removed single-instance action '{}' from tracking", action_key);
+                for active_action in &action_list {
+                    if self.is_single_instance(&active_action.action) {
+                        let action_key = self.get_action_key(&active_action.action);
+                        running_actions.remove(&action_key);
+                        debug!("Removed single-instance action '{}' from tracking", action_key);
+                    }
+                }
             }
             
-            // Terminate the action asynchronously to avoid blocking the event loop
-            self.terminate_action(active_action, &format!("PID {}", target_pid), false).await;
+            // Terminate all actions asynchronously to avoid blocking the event loop
+            for active_action in action_list {
+                self.terminate_action(active_action, &format!("PID {}", target_pid), false).await;
+            }
         } else {
-            debug!("No active action found for PID {}", target_pid);
+            debug!("No active actions found for PID {}", target_pid);
         }
 
         Ok(())
