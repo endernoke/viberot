@@ -5,6 +5,9 @@ use tracing::{info, warn};
 #[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 pub struct Config {
     pub rules: Vec<Rule>,
+    /// Optional override for viberot home directory
+    /// If not specified, uses environment variable or platform defaults
+    pub viberot_home: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Hash)]
@@ -80,6 +83,10 @@ impl Config {
 # Rules support the following:
 # - Single command or array of commands
 # - Single action or array of actions
+
+# Global Configuration:
+# viberot_home = "/custom/path/to/viberot"  # Optional: Override viberot installation directory
+#                                           # If not set, uses VIBEROT_HOME env var or platform defaults
 
 # Example configuration structures:
 
@@ -192,6 +199,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             rules: vec![],
+            viberot_home: None,
         }
     }
 }

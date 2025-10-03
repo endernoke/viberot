@@ -104,8 +104,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create rule engine
     let rule_engine = RuleEngine::new();
 
-    // Create action orchestrator  
-    let action_orchestrator = ActionOrchestrator::new();
+    // Create action orchestrator with config
+    let action_orchestrator = {
+        let config_guard = config.read().await;
+        ActionOrchestrator::with_config(config_guard.clone())
+    };
 
     // Start platform-specific probe
     let probe = PlatformProbe::new(lifecycle_tx);

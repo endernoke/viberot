@@ -1,4 +1,4 @@
-use crate::config::Action;
+use crate::config::{Action, Config};
 use crate::platform::ProcessEvent;
 use std::collections::{HashMap, HashSet};
 use std::process::Stdio;
@@ -12,6 +12,7 @@ use tracing::{info, warn, debug};
 pub struct ActionOrchestrator {
     active_actions: Arc<RwLock<HashMap<u32, Vec<ActiveAction>>>>,
     running_single_instance_actions: Arc<RwLock<HashSet<String>>>,
+    config: Option<Config>,
 }
 
 pub struct ActiveAction {
@@ -24,6 +25,15 @@ impl ActionOrchestrator {
         Self {
             active_actions: Arc::new(RwLock::new(HashMap::new())),
             running_single_instance_actions: Arc::new(RwLock::new(HashSet::new())),
+            config: None,
+        }
+    }
+    
+    pub fn with_config(config: Config) -> Self {
+        Self {
+            active_actions: Arc::new(RwLock::new(HashMap::new())),
+            running_single_instance_actions: Arc::new(RwLock::new(HashSet::new())),
+            config: Some(config),
         }
     }
 
@@ -102,8 +112,8 @@ impl ActionOrchestrator {
         }
     }
 
-    /// Gets the viberot project root directory
-    fn get_viberot_root(&self) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+    /// Development environment fallback: tries to find project root by walking up directories
+    fn development_root_detection() -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
         // Try to find the project root by looking for Cargo.toml starting from current exe
         if let Ok(exe_path) = env::current_exe() {
             let mut current = exe_path.parent();
@@ -111,6 +121,7 @@ impl ActionOrchestrator {
                 if dir.join("Cargo.toml").exists() {
                     // Check if this looks like the viberot root by looking for expected structure
                     if dir.join("src").exists() && dir.join("actions").exists() {
+                        debug!("Found viberot root via exe path: {}", dir.display());
                         return Ok(dir.to_path_buf());
                     }
                 }
@@ -124,6 +135,7 @@ impl ActionOrchestrator {
             if current.join("Cargo.toml").exists() && 
                current.join("src").exists() && 
                current.join("actions").exists() {
+                debug!("Found viberot root via cwd: {}", current.display());
                 return Ok(current);
             }
             if let Some(parent) = current.parent() {
@@ -136,6 +148,37 @@ impl ActionOrchestrator {
         Err("Could not find viberot project root directory. Expected to find Cargo.toml with src/ and actions/ directories.".into())
     }
 
+    /// Gets the viberot project root directory using configuration-based approach
+    fn get_viberot_root(&self) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+        // 1. Environment variable override (highest priority)
+        if let Ok(path) = env::var("VIBEROT_HOME") {
+            let path_buf = PathBuf::from(path);
+            if path_buf.exists() {
+                debug!("Using VIBEROT_HOME environment variable: {}", path_buf.display());
+                return Ok(path_buf);
+            } else {
+                warn!("VIBEROT_HOME environment variable points to non-existent path: {}", path_buf.display());
+            }
+        }
+        
+        // 2. Check config file for installation root
+        if let Some(ref config) = self.config {
+            if let Some(ref home_path) = config.viberot_home {
+                let path_buf = PathBuf::from(home_path);
+                if path_buf.exists() {
+                    debug!("Using viberot_home from config: {}", path_buf.display());
+                    return Ok(path_buf);
+                } else {
+                    warn!("viberot_home in config points to non-existent path: {}", path_buf.display());
+                }
+            }
+        }
+                
+        // 3. Development fallback (lowest priority)
+        debug!("Falling back to development root detection");
+        Self::development_root_detection()
+    }
+    
     pub async fn start_action(&self, action: Action, event: &ProcessEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Check if this is a single-instance action and if it's already running
         if self.is_single_instance(&action) {
