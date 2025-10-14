@@ -133,6 +133,17 @@ command = [
   "*kubectl apply*",
   "*terraform apply*",
   "*terraform plan*",
+
+  # ------------------------------
+  # Package Managers
+  # ------------------------------
+  "*apt install*",
+  "*apt-get install*",
+  "*dnf install*",
+  "*pacman -S*",
+  "*zypper install*",
+  "*snap install*",
+  "*brew install*",
 ]
 
 [rules.action]

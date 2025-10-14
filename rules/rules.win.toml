@@ -148,6 +148,13 @@ command = [
   "*kubectl* apply*",
   "*terraform* apply*",
   "*terraform* plan*",
+
+  # ------------------------------
+  # Package Managers
+  # ------------------------------
+  "*choco* install*",
+  "*winget* install*",
+  "*scoop* install*",
 ]
 
 [rules.action]
