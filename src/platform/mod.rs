@@ -82,6 +82,13 @@ impl ProcessEvent {
 
 /// Trait that all platform probes must implement
 pub trait PlatformProbeTrait {
+    /// Perform first-run platform-specific setup (optional)
+    /// This is called during initial setup before the probe is started
+    /// Default implementation does nothing
+    async fn setup(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
     /// Start the probe and begin monitoring process events
     async fn start(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     

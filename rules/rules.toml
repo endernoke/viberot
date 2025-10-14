@@ -1,0 +1,142 @@
+# VibeRot Configuration File (Linux/MacOS/WSL + bash/zsh)
+#
+# This file defines rules for intercepting and handling commands.
+# Each rule consists of command pattern(s) and action(s) to execute.
+#
+# Rules support the following:
+# - Single command or array of commands
+# - Single action or array of actions
+#
+# Example configuration structures:
+#
+# Basic rule with single command and single action:
+# [[rules]]
+# command = "*npm install*"
+# [rules.action]
+# type = "exec"
+# path = "/path/to/action/executable/or/script"
+# args = ["--arg1", "--arg2"]
+# single_instance = true
+#
+# Rule with multiple commands mapping to the same action:
+# [[rules]]
+# command = ["*cargo build*", "*cargo check*", "*cargo test*"]
+# [rules.action]
+# type = "exec"
+# path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay"
+# args = ["--exit-on-stdin-close"]
+# single_instance = true
+#
+# Rule with single command mapping to multiple actions:
+# [[rules]]
+# command = "*docker build*"
+# action = [
+#   { type = "exec", path = "python3", args = ["actions/example/info.py"] },
+#   { type = "exec", path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay", args = ["--exit-on-stdin-close"], single_instance = true }
+# ]
+#
+# Rule with multiple commands mapping to multiple actions:
+# [[rules]]
+# command = ["*npm install*", "*yarn install*", "*pnpm install*"]
+# action = [
+#   { type = "exec", path = "node", args = ["/path/to/script.js"] },
+#   { type = "exec", path = "google-chrome", args = ["https://www.reddit.com/r/unixporn"] }
+# ]
+#
+# Alternative syntax using aliases:
+# [[rules]]
+# commands = ["*git push*", "*git pull*"]   # "commands" is an alias for "command"
+# actions = [                               # "actions" is an alias for "action"
+#   { type = "exec", path = "codex", args = ["exec", "--sandbox", "danger-full-access", "\"chatgpt pls fix my syntax error make no mistakes\""] }
+# ]
+#
+# Path Resolution:
+# - Executable names (e.g., "python", "notepad.exe") are found via PATH
+# - Absolute paths (e.g., "C:\path\to\action.exe") are used as-is
+# - Relative paths are resolved relative to the viberot project root
+# - Environment variables are supported:
+#   - ${VIBEROT_HOME}: viberot project root
+#   - ${VIBEROT_ACTIONS}: viberot/actions directory
+#   - Other standard environment variables work too
+
+[[rules]]
+command = [
+  #------------------------------
+  # Development
+  #------------------------------
+  # rust
+  "*cargo build*",
+  "*cargo run*",
+  "*cargo test*",
+  "*cargo bench*",
+  "*cargo install*",
+  
+  # Python
+  "*pip install*",
+  "*python setup.py*",
+  "*poetry add*",
+  "*poetry install*",
+  "*pyinstaller *.py*",
+  "*pipx install*",
+  # Optimally we would also be able to detect if a pytorch/tensorflow/jax model is being trained 
+  # but that probably involves calling an external action which will inspect the code
+  
+  # js/ts
+  "*npm install*",
+  "*npm i*",
+  "*npm ci*",
+  "*npm run test*",
+  "*npm test*",
+  "*yarn install*",
+  "*yarn add*",
+  "*yarn test*",
+  "*pnpm install*",
+  "*pnpm run test*",
+  "*pnpm test*",
+
+  # c/c++
+  "*cmake*",
+  "*make*",
+  # maybe not directly detect compilers because only gods compile big projects with 100 flags by hand
+  # "*gcc *",
+  # "*g++ *",
+  # "*clang ",
+  # "*clang++ *",
+
+  # java
+  "*mvn install*",
+  "*mvn clean install*",
+  "*mvn compile*",
+  "*mvn dependency:resolve*",
+  "*mvn dependency:tree*",
+  "*gradle build*",
+
+  # go
+  "*go build*",
+  "*go mod download*",
+
+  # native stuff
+  "*react-native run*",
+  "*react-native build*",
+  "*expo run*",
+  "*expo prebuild*",
+  "*eas build*",
+  "*gradlew build*",
+  "*flutter pub get*",
+  "*flutter build*",
+
+  #------------------------------
+  # Cloud
+  #------------------------------
+  "*docker build*",
+  "*docker-compose up*",
+  "*kubectl apply*",
+  "*terraform apply*",
+  "*terraform plan*",
+]
+
+[rules.action]
+type = "exec"
+path = "${VIBEROT_ACTIONS}/overlay/target/release/viberot-overlay"
+args = ["--exit-on-stdin-close"]
+single_instance = true

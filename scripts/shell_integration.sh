@@ -98,5 +98,3 @@ _viberot_post_command_hook() {
 
 preexec_functions+=(_viberot_pre_command_hook)
 precmd_functions+=(_viberot_post_command_hook)
-
-echo "VibeRot shell integration enabled."

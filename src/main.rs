@@ -6,6 +6,7 @@ mod config_watcher;
 mod rule_engine;
 mod action_orchestrator;
 mod platform;
+mod setup;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use config_watcher::ConfigWatcher;
 use rule_engine::RuleEngine;
 use action_orchestrator::ActionOrchestrator;
 use platform::{PlatformProbe, PlatformProbeTrait, ProcessLifecycleEvent};
+use setup::SetupManager;
 
 fn init_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Get log directory
@@ -75,6 +77,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     init_logging()?;
 
     info!("Starting VibeRot Core Service");
+
+    // Check if first-run setup is needed
+    if SetupManager::is_setup_needed() {
+        info!("First-run setup detected");
+        
+        // Create a temporary probe for setup
+        let (setup_tx, _) = broadcast::channel(1);
+        let probe_for_setup = PlatformProbe::new(setup_tx);
+        
+        // Run setup
+        if let Err(e) = SetupManager::run_setup(&probe_for_setup).await {
+            error!("Setup failed: {}", e);
+            eprintln!("\n❌ Setup failed: {}", e);
+            eprintln!("Please check the logs for more details.\n");
+            return Err(e);
+        }
+    }
 
     // Load configuration
     let config_path = get_config_path()?;

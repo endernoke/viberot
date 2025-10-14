@@ -107,7 +107,7 @@ impl PosixShellProbe {
         // Just check if .viberot/shell_integration file exists in home directory
         // and assume integration is set up if it does
         if let Some(home_dir) = dirs::home_dir() {
-            let integration_file = home_dir.join(".viberot/shell_integration.sh");
+            let integration_file = home_dir.join(".viberot").join("shell_integration.sh");
             if integration_file.exists() {
                 return true;
             }
@@ -116,103 +116,100 @@ impl PosixShellProbe {
         false
     }
 
-    async fn setup_shell_hooks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn setup_shell_integration(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Skip setup if already configured
         if Self::is_shell_integration_configured() {
-            debug!("Shell integration already configured, skipping setup");
+            info!("Shell integration already configured, skipping setup");
             return Ok(());
         }
 
+        println!("To enable VibeRot to react to shell commands, shell integration is required.");
         println!();
-        println!("Welcome to VibeRot!");
-        println!("=================================");
+        println!("Manual setup instructions:");
+        println!("  1. Copy the shell integration script:");
+        println!("     cp scripts/shell_integration.sh $HOME/.viberot/shell_integration.sh");
         println!();
-        println!("To enable VibeRot to react to shell commands, please do the following.");
+        println!("  2. Add to your shell configuration:");
+        println!("     echo '. \"$HOME/.viberot/shell_integration.sh\"' >> ~/.bashrc  # for bash");
+        println!("     echo '. \"$HOME/.viberot/shell_integration.sh\"' >> ~/.zshrc   # for zsh");
         println!();
-        println!("  cp scripts/shell_integration.sh $HOME/.viberot/shell_integration.sh");
-        println!();
-        println!("  echo '. \"$HOME/.viberot/shell_integration.sh\"' >> ~/.bashrc # for bash");
-        println!("  echo '. \"$HOME/.viberot/shell_integration.sh\"' >> ~/.zshrc  # for zsh");
-        println!();
-        println!("Or manually add the following line to your shell configuration:");
-        println!("  . \"$HOME/.viberot/shell_integration.sh\"");
-        println!();
-        println!("IMPORTANT: For bash users:");
-        println!("  You need to install preexec and precmd functions for bash.");
+        println!("IMPORTANT for bash users:");
+        println!("  Bash requires bash-preexec. Install it first before the above step:");
+        println!("    curl https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh -o ~/.bash-preexec.sh");
+        println!("    echo -e 'if [ -f \"$HOME/.bash-preexec.sh\" ]; then\\n  source \"$HOME/.bash-preexec.sh\"\\nfi\\n' >> ~/.bashrc  # for bash");
+        println!("    echo -e 'if [ -f \"$HOME/.bash-preexec.sh\" ]; then\n  source \"$HOME/.bash-preexec.sh\"\nfi\n' >> ~/.zshrc  # for zsh");
         println!("  See: https://github.com/rcaloras/bash-preexec");
         println!();
-        println!("  curl https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh -o ~/.bash-preexec.sh");
-        println!("  source ~/.bash-preexec.sh");
-        println!();
         
-        print!("Would you like VibeRot to set things up automatically for you? [y/N]: ");
+        print!("Would you like VibeRot to set this up automatically? [y/N]: ");
         std::io::stdout().flush()?;
         
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
         
         if input.trim().to_lowercase().starts_with('y') {
-            self.setup_automatic_integration().await?;
-            println!("Restart your shell or run the following to apply the changes:");
-            println!("  . ~/.bashrc # for bash");
-            println!("  . ~/.zshrc  # for zsh");
+            self.perform_automatic_integration().await?;
+            println!();
+            println!("✓ Shell integration installed successfully!");
+            println!();
+            println!("Restart your shell or run:");
+            println!("  source ~/.bashrc  # for bash");
+            println!("  source ~/.zshrc   # for zsh");
             println!();
         } else {
-            println!("Cancelled.");
-            println!("The service will continue running. You can set up shell integration later.");
-            println!("Note: To suppress this prompt in the future without setting up integration, you can create an empty file at:");
-            println!("  $HOME/.viberot/shell_integration.sh");
+            println!();
+            println!("Setup cancelled. You can set up shell integration manually later.");
+            println!("Note: to see this setup prompt again, delete the file:");
+            println!("  ~/.viberot/.setup_complete");
+            println!();
         }
-        println!("=================================");
-        println!();
-        println!("You can now let VibeRot run in the background and it will launch brainrot when a configured command is executed.");
-        println!("Tip: use nohup to keep it running after you close the terminal.");
-        println!("  nohup target/release/viberot &");
 
         Ok(())
     }
 
-    async fn setup_automatic_integration(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn perform_automatic_integration(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
         let integration_file = home_dir.join(".viberot").join("shell_integration.sh");
         fs::create_dir_all(home_dir.join(".viberot"))?;
-        let bash_config_file = home_dir.join(format!(".bashrc"));
-        let zsh_config_file = home_dir.join(format!(".zshrc"));
+        let bash_config_file = home_dir.join(".bashrc");
+        let zsh_config_file = home_dir.join(".zshrc");
 
         // Install preexec for bash
-        let mut performed_bash_preexec_install = false;
         if bash_config_file.exists() {
             // Borrow some technical debt and just use system command to fetch the file
             if !home_dir.join(".bash-preexec.sh").exists() {
-                println!("Installing bash-preexec for bash...");
+                println!("  Installing bash-preexec...");
                 let status = std::process::Command::new("sh")
                     .arg("-c")
                     .arg("curl https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh -o ~/.bash-preexec.sh")
                     .status()?;
                 if !status.success() {
-                    warn!("Failed to download bash-preexec.sh, please install it manually with the instructions above.");
+                    warn!("Failed to download bash-preexec.sh");
+                    println!("  ⚠ Failed to download bash-preexec.sh");
+                    println!("    Please install it manually with the instructions above.");
                 } else {
-                    performed_bash_preexec_install = true;
                     let source_line = "\n# Load bash-preexec for VibeRot\nif [ -f \"$HOME/.bash-preexec.sh\" ]; then\n  source \"$HOME/.bash-preexec.sh\"\nfi\n";
                     fs::OpenOptions::new()
                         .create(false)
                         .append(true)
                         .open(&bash_config_file)?
                         .write_all(source_line.as_bytes())?;
+                    println!("  ✓ Installed bash-preexec");
                 }
             } else {
-                debug!("bash-preexec already imported in this session");
+                debug!("bash-preexec already exists");
             }
         }
         
-        // Get the absolute path to the viberot.sh script
+        // Get the absolute path to the shell_integration.sh script
         let current_dir = env::current_dir()?;
-        let script_path = current_dir.join("scripts").join("viberot.sh");
+        let script_path = current_dir.join("scripts").join("shell_integration.sh");
 
         if !script_path.exists() {
             return Err(format!("Could not find script at expected path: {}", script_path.display()).into());
         }
         fs::write(&integration_file, fs::read_to_string(&script_path)?)?;
+        println!("  ✓ Copied shell integration script to: {}", integration_file.display());
         
         // Add line to source the integration file in shell config
         let source_line = format!("\n# VibeRot shell integration\n. \"{}\"\n", integration_file.display());
@@ -223,6 +220,7 @@ impl PosixShellProbe {
                 .append(true)
                 .open(&bash_config_file)?
                 .write_all(source_line.as_bytes())?;
+            println!("  ✓ Updated: {}", bash_config_file.display());
         }
         if zsh_config_file.exists() {
             fs::OpenOptions::new()
@@ -230,20 +228,8 @@ impl PosixShellProbe {
                 .append(true)
                 .open(&zsh_config_file)?
                 .write_all(source_line.as_bytes())?;
+            println!("  ✓ Updated: {}", zsh_config_file.display());
         }
-        
-        println!("\n✅ Shell integration installed successfully!");
-        println!("  Created: {}", integration_file.display());
-        if performed_bash_preexec_install {
-            println!("  Created: $HOME/.bash-preexec.sh");
-        }
-        if bash_config_file.exists() {
-            println!("  Updated: {}", bash_config_file.display());
-        }
-        if zsh_config_file.exists() {
-            println!("  Updated: {}", zsh_config_file.display());
-        }
-        println!();
         
         Ok(())
     }
@@ -401,6 +387,11 @@ impl PosixShellProbe {
 }
 
 impl PlatformProbeTrait for PosixShellProbe {
+    async fn setup(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Running POSIX shell probe setup");
+        self.setup_shell_integration().await
+    }
+
     async fn start(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Starting POSIX shell probe for process monitoring");
 
@@ -415,16 +406,7 @@ impl PlatformProbeTrait for PosixShellProbe {
             warn!("Could not find home directory, shell integration may not work");
         }
 
-        // First, set up shell hooks (with user approval)
-        // Continue running the service regardless of setup success/failure
-        if let Err(e) = self.setup_shell_hooks().await {
-            warn!("Shell hook setup failed: {}", e);
-            println!("\n⚠️  Shell integration setup was not completed.");
-            println!("The VibeRot service will continue running, but shell command monitoring will not work");
-            println!("until you manually set up the integration as described above.\n");
-        }
-
-        // Then start the socket server
+        // Start the socket server
         self.start_socket_server().await?;
 
         info!("POSIX shell probe started successfully");
